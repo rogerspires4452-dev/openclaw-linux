@@ -128,6 +128,8 @@ if [ -n "${SSH_AUTH_SOCK:-}" ]; then
     extra_env="--setenv=SSH_AUTH_SOCK=$SSH_AUTH_SOCK"
 fi
 
+# extra_env is intentionally word-split below to pass zero or one --setenv.
+# shellcheck disable=SC2086
 if ! systemd-run --user --collect --unit="$unit" \
     --description="OpenClaw dev-track update (launched by provision/update.sh)" \
     --setenv="OC_BIN=$oc_bin" \
