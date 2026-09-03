@@ -19,6 +19,9 @@ fi
 target=${1:-"$HOME/Backups"}
 mkdir -p "$target"
 # Resolve to an absolute path so the printed path and checksum are unambiguous.
+# The empty CDPATH assignment keeps a relative target from resolving through
+# CDPATH (which would echo the resolved dir into the captured path).
+# shellcheck disable=SC1007
 target=$(CDPATH= cd -- "$target" && pwd)
 
 echo "Creating verified OpenClaw backup in: $target"
@@ -26,6 +29,8 @@ openclaw backup create --output "$target" --verify
 
 # Archives are timestamped <iso8601>-openclaw-backup.tar.gz and existing files
 # are never overwritten, so the newest match is the archive we just created.
+# The glob already constrains matches to our own archive names.
+# shellcheck disable=SC2012
 archive=$(ls -t "$target"/*-openclaw-backup.tar.gz 2>/dev/null | head -n 1 || true)
 if [ -z "$archive" ] || [ ! -f "$archive" ]; then
     echo "backup.sh: backup succeeded but no archive was found in $target" >&2

@@ -66,7 +66,7 @@ openclaw gateway status                                 # service + health probe
 | --- | --- | --- |
 | Unit file missing | `test -f ~/.config/systemd/user/openclaw-gateway.service` | Re-run `openclaw gateway install`; read its stderr if it refuses |
 | Unit present, not running / crash-loops | `journalctl --user -u openclaw-gateway.service -n 100`, then `openclaw doctor --non-interactive` | Fix what doctor reports (usually config), then `systemctl --user restart openclaw-gateway.service` |
-| Service active but health check fails | `openclaw config validate`; `ss -ltnp | grep 18789` for a port clash | One gateway per machine: stop the other instance, then restart the service |
+| Service active but health check fails | `openclaw config validate`; `ss -ltnp \| grep 18789` for a port clash | One gateway per machine: stop the other instance, then restart the service |
 | Dead after reboot, no login session | `loginctl show-user "$(whoami)" -p Linger` | Run the `loginctl enable-linger` command above once |
 
 Retry the whole step at most three times, then abort the wizard and report the
