@@ -1,0 +1,52 @@
+## OpenClaw Linux appliance — package seed list (archiso profile).
+##
+## One package per line; blank lines and lines starting with "#" are ignored
+## by mkarchiso. Comments are grouped by purpose.
+##
+## This is a skeleton seed, not a tested package set: review every group
+## against current Arch repos before the first real ISO build (see README.md).
+##
+## UI note: WebKitGTK (webkit2gtk-4.1) is deliberately NOT listed — it renders
+## blank on the reference hardware (docs/verdicts/webkitgtk-on-beelink.md).
+## All UI is Chromium app-mode or native GTK/Qt clients.
+
+# --- Base system ---
+base
+base-devel          # build toolchain for AUR/from-source additions
+linux
+linux-firmware
+sudo
+networkmanager      # network control (nmcli/nmtui)
+openssh             # remote management of the appliance
+
+# --- Hyprland-family desktop (minimal bar + terminal; matches the beelink reference box) ---
+hyprland
+waybar              # minimal status bar
+foot                # Wayland-native terminal
+xorg-xwayland       # X11 fallback for non-Wayland clients
+xdg-desktop-portal-hyprland
+polkit              # privilege prompts for desktop apps
+wl-clipboard        # Wayland clipboard (needed by Chromium app-mode)
+xdg-utils           # xdg-open & friends
+
+# --- UI runtime: Chromium app-mode ---
+# The OpenClaw dashboard/pairing UI runs as `chromium --app=...` (see
+# provision/install-dashboard-launcher.sh). Do NOT add webkit2gtk-4.1 here.
+chromium
+
+# --- OpenClaw gateway runtime ---
+git
+nodejs
+pnpm
+
+# --- Audio / fonts (sensible for a media-capable appliance) ---
+pipewire
+pipewire-pulse
+wireplumber
+noto-fonts
+
+# --- Boot/install plumbing for the installed target (EFI, Intel reference box) ---
+grub
+efibootmgr
+dosfstools
+intel-ucode         # reference hardware is Alder Lake-N
