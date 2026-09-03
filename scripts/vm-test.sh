@@ -5,7 +5,7 @@
 # ~/vm-test; SSH ubuntu@localhost:2222 with ~/.ssh/oc-vm-key) and exercises
 # every provision/*.sh script SAFELY:
 #
-#   * syntax: sh -n on every provisioner (covers scripts with no flags yet);
+#   * syntax: sh -n on every provisioner, including provision/steps/*.sh;
 #   * update.sh --help           -> exit 0, prints usage;
 #   * update.sh (no args)        -> status-only path: exit 0, never updates;
 #   * backup.sh <tmp target dir> -> exit 0, prints archive path + SHA256,
@@ -271,9 +271,9 @@ if ! vm_ssh "rm -rf -- '$vm_work' && mkdir -p -- '$vm_work'"; then
     die "could not prepare remote work dir $vm_work"
 fi
 
-# Copy every provision/*.sh into the VM.
-if ! (cd "$provision_dir" && tar -cf - ./*.sh) | vm_ssh "tar -xf - -C '$vm_work'"; then
-    die "could not copy provision/*.sh into the VM"
+# Copy every provision/*.sh and provision/steps/*.sh into the VM.
+if ! (cd "$provision_dir" && tar -cf - ./*.sh ./steps/*.sh) | vm_ssh "tar -xf - -C '$vm_work'"; then
+    die "could not copy provision scripts into the VM"
 fi
 
 # Fake openclaw shim: written locally, pushed into $vm_work/bin. It logs every
@@ -295,6 +295,17 @@ case " $* " in
         else
             printf '%s\n' "openclaw update status: dev-track git checkout is up to date (shim)"
         fi
+        exit 0
+        ;;
+    *" secrets store list "*)
+        # Read-only probe (firstboot steps): empty store, so keys read as
+        # missing and the steps stay pending in dry-run.
+        exit 0
+        ;;
+    *" config get "*)
+        # Read-only probe (firstboot steps): every path reads as unset, so
+        # steps stay pending in dry-run.
+        printf '%s\n' 'unset'
         exit 0
         ;;
     *" backup create "*)
@@ -334,13 +345,13 @@ vm_ssh "chmod +x '$vm_work/bin/openclaw'" >/dev/null 2>&1 || true
 vm_env="PATH='$vm_work/bin:/usr/bin:/bin' OPENCLAW_SHIM_LOG='$vm_work/shim.log'"
 
 # --- checks ---
-# 1. Every provisioner parses (POSIX sh -n), including any future scripts.
-for _f in "$provision_dir"/*.sh; do
-    _base=$(basename -- "$_f")
-    if last_out=$(vm_ssh "sh -n '$vm_work/$_base'" 2>&1); then
-        pass "syntax: $_base parses (sh -n)"
+# 1. Every provisioner parses (POSIX sh -n), including the step modules.
+for _f in "$provision_dir"/*.sh "$provision_dir"/steps/*.sh; do
+    _rel=${_f#"$provision_dir/"}
+    if last_out=$(vm_ssh "sh -n '$vm_work/$_rel'" 2>&1); then
+        pass "syntax: $_rel parses (sh -n)"
     else
-        fail "syntax: $_base fails sh -n"
+        fail "syntax: $_rel fails sh -n"
         show_out "$last_out"
     fi
 done
@@ -362,16 +373,12 @@ assert_out_has "backup.sh prints a SHA256 checksum" "SHA256:"
 run_case "backup archive exists inside the temp target" \
     "ls '$backup_target'/"'*'"-openclaw-backup.tar.gz"
 
-# 5. firstboot.sh --dry-run: exercised once the script exists in the repo
-#    (issue #9 lists it; provision/firstboot.sh has not landed yet).
+# 5. firstboot.sh --dry-run: the wizard runs every step module in
+#    provision/steps/ in dry-run mode against the read-only shim answers.
 if [ -f "$provision_dir/firstboot.sh" ]; then
     run_case "firstboot.sh --dry-run exits 0" \
         "$vm_env sh '$vm_work/firstboot.sh' --dry-run"
-    if [ -n "$last_out" ]; then
-        pass "firstboot.sh --dry-run produced output"
-    else
-        fail "firstboot.sh --dry-run produced no output"
-    fi
+    assert_out_has "firstboot.sh --dry-run finishes all steps" "Dry-run finished"
 else
     skip "firstboot.sh --dry-run (provision/firstboot.sh not present in repo yet)"
 fi
@@ -383,7 +390,7 @@ if [ -n "$shim_log" ]; then
     show_out "$shim_log"
 fi
 
-_unexpected=$(printf '%s\n' "$shim_log" | grep -vE '^(update status|backup create)' || true)
+_unexpected=$(printf '%s\n' "$shim_log" | grep -vE '^(update status|backup create|secrets store list|config get)' || true)
 if [ -n "$_unexpected" ]; then
     fail "shim log shows unexpected openclaw invocations"
     show_out "$_unexpected"
