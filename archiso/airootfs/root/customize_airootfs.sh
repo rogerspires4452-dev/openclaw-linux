@@ -104,6 +104,10 @@ log "installing workspace dependencies (frozen lockfile)"
 # image does not carry pnpm's download cache in /root.
 pnpm install --frozen-lockfile --store-dir /var/tmp/pnpm-store
 log "building dist/ (pnpm build)"
+# tsdown refuses to run when the cgroup memory limit is invisible (archiso
+# chroot mount namespace) — the error asks for an explicit heap cap. The
+# build host has 16G; 4G is a safe ceiling for OpenClaw's tsdown bundles.
+export OPENCLAW_TSDOWN_MAX_OLD_SPACE_MB=4096
 pnpm build
 # The pre-staged user unit (and the reference host's `openclaw gateway
 # install`) execs node on dist/index.js; fail loudly if the build output is
