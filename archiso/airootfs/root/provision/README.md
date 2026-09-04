@@ -31,9 +31,11 @@ Contents (same set the repo root ships):
 The image also ships `etc/systemd/system/openclaw-firstboot.service` — a
 oneshot that runs this wizard and then disarms itself. Like all units under
 that path in an archiso profile it is **disabled in the image**: enablement
-belongs to the *installed* system. The future scripted installer (tracked
-in the repo's `archiso/README.md`) enables it in the target chroot; for a
-manual install the same step is:
+belongs to the *installed* system. The guided installer on this media
+(`/root/install-openclaw.sh`; repo source in the `install/` directory)
+stages this whole `provision/` payload and the unit into the installed
+system and enables the unit in the target chroot; for a manual install the
+same step is:
 
 ```sh
 # inside the installed system's chroot (e.g. after arch-chroot):

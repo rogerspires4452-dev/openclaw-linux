@@ -11,8 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Shellcheck provision scripts (POSIX sh)
-        run: shellcheck -s sh provision/*.sh provision/steps/*.sh
+      - name: Shellcheck provision + installer scripts (POSIX sh)
+        run: shellcheck -s sh provision/*.sh provision/steps/*.sh install/*.sh archiso/airootfs/root/install-openclaw.sh
 
       - name: Markdownlint root and docs markdown
         run: npx --yes markdownlint-cli@0.49.1 "*.md" "docs/**/*.md"

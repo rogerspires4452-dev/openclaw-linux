@@ -10,15 +10,7 @@ profile targets the same software stack — minus anything that depends on
 WebKitGTK, which renders blank there
 ([`docs/verdicts/webkitgtk-on-beelink.md`](../docs/verdicts/webkitgtk-on-beelink.md)).
 
-**Status: buildable skeleton.** Every file is syntactically validated and
-every package name is verified against the official Arch repos, but no ISO
-has been built from this profile yet — the maintainer builds and iterates
-(`mkarchiso` needs root and a long runtime). The profile mirrors the
-`releng` layout shipped with archiso 90 (bootmode names `bios.syslinux` /
-`uefi.systemd-boot`, plain `initramfs-linux.img` with the archiso hooks).
-The build-time bake (below) is validated for syntax, tag existence, and
-layout only — the first real `mkarchiso` run is a live test on the
-maintainer's box.
+**Status: buildable skeleton with a complete install flow.** Every file is syntactically validated and every package name is verified against the official Arch repos, but no ISO has been built from this profile yet — the maintainer builds and iterates (`mkarchiso` needs root and a long runtime). The profile mirrors the `releng` layout shipped with archiso 90 (bootmode names `bios.syslinux` / `uefi.systemd-boot`, plain `initramfs-linux.img` with the archiso hooks). Since 2026-09-04 the media also ships a guided installer at `/root/install-openclaw.sh` (issue #22) — boot the stick and run it to install OpenClaw Linux onto a PC; see [`install/`](../install/README.md) for the design and the archinstall version pinning. The build-time bake (issue #21, below) is validated for syntax, tag existence, and layout only — the first real `mkarchiso` run is the live test on the maintainer's box.
 
 ## Layout
 
@@ -30,6 +22,7 @@ archiso/
 ├── packages.x86_64             ← package seed list, grouped by purpose (all verified)
 ├── airootfs/                   ← copied verbatim into the image root
 │   ├── etc/
+│   │   ├── issue               ← live-console banner: how to run the guided installer
 │   │   ├── mkinitcpio.conf.d/archiso.conf   ← archiso initramfs hooks (boot chain)
 │   │   ├── mkinitcpio.d/linux.preset        ← build only the archiso initramfs
 │   │   ├── sddm.conf.d/                     ← SDDM greeter + autologin (installed system)
@@ -42,9 +35,10 @@ archiso/
 │   ├── usr/
 │   │   ├── local/bin/openclaw-dashboard-autostart   ← dashboard app-mode wrapper
 │   │   └── share/sddm/hyprland.lua                  ← greeter compositor config
-│   ├── root/
-│   │   ├── customize_airootfs.sh            ← BUILD-TIME bake hook (issue #21; see below)
-│   │   └── provision/         ← staged copy of the repo's provision/ payload (+ README)
+│   └── root/
+│       ├── install-openclaw.sh          ← guided installer (staged copy of install/, issue #22)
+│       ├── customize_airootfs.sh        ← BUILD-TIME bake hook (issue #21; see below)
+│       └── provision/                   ← staged copy of the repo's provision/ payload (+ README)
 ├── efiboot/loader/             ← systemd-boot config (UEFI bootmode)
 ├── grub/loopback.cfg           ← lets an existing GRUB boot the ISO directly
 └── syslinux/                   ← syslinux config (BIOS bootmode)
@@ -131,6 +125,33 @@ Notes:
   **boot → gateway on <http://127.0.0.1:18789> → dashboard** story, fully
   offline (see "Build-time bake" below). Config (API key, Telegram pairing)
   is still a first-boot wizard pass — that part needs network.
+
+- Booting the media lands on a root console (autologin on tty1). The console
+  banner (`airootfs/etc/issue`) points at the guided installer:
+  `sh /root/install-openclaw.sh` (`--check` runs a read-only probe of the
+  machine first).
+
+## Guided install-to-disk (issue #22)
+
+`install/install-openclaw.sh` (repo) is staged as
+`archiso/airootfs/root/install-openclaw.sh`, so a built ISO carries it at
+`/root/install-openclaw.sh` (mode 755 via `profiledef.sh`
+`file_permissions`). It prompts for the target disk (with existing-OS
+detection + erase confirmation), hostname/user/passwords, then drives
+archinstall in scripted mode for a full-disk UEFI install (ESP + btrfs
+`@` layout, grub, NetworkManager, zram) and stages/enables the first-boot
+payload in the installed system. Read
+[`install/README.md`](../install/README.md) first — it documents the
+archinstall path choice, the schema pinning, and what still needs a live
+hardware test.
+
+Sync rule: the staged copy must stay **byte-identical** to
+`install/install-openclaw.sh` (same convention as `provision/`):
+
+```sh
+cp install/install-openclaw.sh archiso/airootfs/root/install-openclaw.sh
+```
+
 
 ## Desktop session wiring (installed system)
 
@@ -251,8 +272,10 @@ pure config pass:
   systemctl enable openclaw-firstboot.service   # in the installed chroot
   ```
 
-  The scripted installer (TODO below) performs that step; manual installs
-  can run it after `arch-chroot`.
+  The guided installer ([`install/install-openclaw.sh`](../install/install-openclaw.sh))
+  performs that step automatically at the end of a scripted install: it
+  copies the staged wizard payload into the target and enables the unit
+  (manual installs can still run the command above after `arch-chroot`).
 
 - The wizard is interactive (masked secret prompts, ephemeral pairing
   code) and drives the desktop user's systemd session, so the first-boot UX
@@ -275,29 +298,21 @@ re-verified 2026-09-04); `syslinux` and `mkinitcpio-archiso` are required by
 mkarchiso's bootmode validation/boot chain. `webkit2gtk-4.1` is deliberately
 absent.
 
+`install/install-openclaw.sh` embeds its own **target** package list for
+installed systems: the same seed minus the live-media-only entries
+(syslinux, mkinitcpio-archiso, dosfstools, archinstall,
+arch-install-scripts); CPU microcode is added by archinstall at install
+time. Keep the two lists in sync when the seed changes.
+
 ## TODOs
 
-- Scripted install-to-disk flow (archinstall/calamares/scripted) that, at
-  install time, copies the airootfs overlay to the target and enables
-  `openclaw-firstboot.service`.
 - First real `mkarchiso` build, then a qemu smoke test (above), then
   re-verify the package seed against current repos at build time. The bake
   makes this the critical live-test milestone — items to verify on the real
-  build:
-  - the hook's DNS fallback fires/does not fire as expected on the build
-    host, and the chroot resolver actually reaches github + the npm registry;
-  - `pnpm install --frozen-lockfile` + `pnpm build` complete against the
-    pinned tag (dist naming, native deps) and `openclaw --version` matches
-    the tag;
-  - on an installed system with a desktop user (issue #20), the gateway
-    starts unconfigured from the first login (or fails gracefully until
-    `openclaw onboard --mode local` + the wizard run) and the dashboard
-    autostart reliably finds the Control UI (chromium-vs-gateway startup
-    race; add a wait helper only if the real hardware loses it);
-  - image size lands in the expected range (above).
-- Installed-appliance update story: the baked checkout is a stable tag, so
-  `openclaw update` dev-track semantics do not apply; appliances update by
-  re-image (or a root-run `git fetch` + `pnpm install`/build in
-  `/opt/openclaw`). The wizard still sets `update.channel=dev` for the
-  reference-host workflow — document the appliance path when the installer
-  flow lands.
+  build: the chroot resolver reaches github + the npm registry during the
+  hook, `pnpm install --frozen-lockfile` + `pnpm build` complete inside the
+  chroot, `/opt/openclaw` lands with the CLI on PATH, and the SDDM → uwsm
+  → Hyprland autologin chain lands with the dashboard autostart firing
+  after the gateway reports healthy.
+- One full install-to-disk run from a built ISO on spare hardware (see
+  `install/README.md`, "Needs a live hardware test").
