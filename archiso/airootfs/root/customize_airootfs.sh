@@ -89,11 +89,12 @@ _pinned_pnpm=$(grep -E '"packageManager": "pnpm@' "$OPENCLAW_DIR/package.json" \
     | sed 's/.*pnpm@\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/')
 [ -n "$_pinned_pnpm" ] || _pinned_pnpm='12.1.0'
 log "installing pinned pnpm@${_pinned_pnpm} via @pnpm/exe (install.js fetches the native binary)"
-# npm >= 12 gates install scripts behind per-package approval; without it the
-# @pnpm/exe preinstall never runs and the shipped placeholder stays behind
-# (a broken text file masquerading as the pnpm bin). Approve, then install.
-npm install-scripts approve @pnpm/exe >/dev/null 2>&1 || true
-npm install -g "@pnpm/exe@${_pinned_pnpm}" --force
+# npm >= 12 gates install scripts behind allowScripts; without --allow-scripts
+# the @pnpm/exe preinstall never runs and the shipped placeholder stays behind
+# (a broken text file masquerading as the pnpm bin — observed 2026-09-04,
+# "line 4: syntax error" with the placeholder text). Allow the script for
+# this install, then verify the real binary landed.
+npm install -g "@pnpm/exe@${_pinned_pnpm}" --force --allow-scripts=@pnpm/exe
 pnpm --version
 
 # --- install deps + build -----------------------------------------------------
