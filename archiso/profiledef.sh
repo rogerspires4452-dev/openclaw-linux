@@ -24,7 +24,7 @@ bootmodes=('bios.syslinux'
 # Build-time config
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
-airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M')
+airootfs_image_tool_options=('-comp' 'zstd' '-Xcompression-level' '15')
 
 # Files in airootfs/ that need explicit modes beyond the default. mkarchiso
 # copies the airootfs overlay with --no-preserve=mode, so this list is the
