@@ -129,7 +129,7 @@ read_secret() {  # read_secret <prompt>
 TMP_DIR=''
 _echo_off=0
 _RUN_PID=''   # archinstall child, killed on abort so an interrupted run cannot continue unattended
-# shellcheck disable=SC2329 # cleanup is invoked via trap EXIT/INT, not by name
+# shellcheck disable=SC2317,SC2015,SC2154,SC2329 # cleanup is trap-invoked; A&&B||C idiom is intentional; vars set in the calling flow (older CI shellcheck uses SC2317/SC2015/SC2154, newer uses SC2329)
 cleanup() {
     if [ "$_echo_off" -eq 1 ]; then stty echo 2>/dev/null || true; fi
     if [ -n "$_RUN_PID" ]; then kill "$_RUN_PID" 2>/dev/null || true; fi
