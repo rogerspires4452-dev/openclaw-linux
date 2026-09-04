@@ -5,6 +5,16 @@ interactively as the desktop user on first boot, after OpenClaw itself is
 installed and the baseline config exists (`gateway.mode=local`, written by
 `openclaw onboard --mode local`).
 
+On openclaw-linux install media the "OpenClaw itself is installed" half is
+already true before the box is even booted: the archiso build bakes a pinned
+stable OpenClaw into the image (issue #21 — `/opt/openclaw` via
+`archiso/airootfs/root/customize_airootfs.sh`, CLI on PATH, gateway user
+unit + dashboard autostart pre-staged under `/etc/skel`). This wizard is the
+remaining **config pass**: it runs `openclaw gateway install` again (step 1,
+regenerating the staged unit tuned to the machine), then stores the DeepSeek
+key, pairs Telegram, installs the app-menu dashboard launcher, and sets the
+update channel.
+
 Outcome (issue #1): gateway service enabled, DeepSeek key configured, Telegram
 paired with `dmPolicy: "pairing"` and an owner allowlisted, dashboard launcher
 installed, `update.channel=dev`.

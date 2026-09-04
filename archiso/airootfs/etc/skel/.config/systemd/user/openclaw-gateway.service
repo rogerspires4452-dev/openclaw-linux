@@ -1,0 +1,55 @@
+# OpenClaw gateway — desktop user service (issue #21).
+#
+# Staged through /etc/skel so the gateway runs in the installed system's
+# desktop user session, mirroring the reference host (beelink) where OpenClaw
+# runs as a user unit serving the Control UI on http://127.0.0.1:18789.
+#
+# Why /etc/skel (and why pre-enabled):
+#   * No desktop user exists at ISO build time — issue #20 (parallel work)
+#     adds SDDM + a default desktop user. useradd -m copies /etc/skel into
+#     every new user's home, and mkarchiso additionally copies /etc/skel into
+#     the homes of users listed in airootfs/etc/passwd during the build — so
+#     whichever way the desktop user is created (build-time or install-time),
+#     they start with this unit in ~/.config/systemd/user/.
+#   * The default.target.wants/ symlink (../openclaw-gateway.service) makes
+#     systemd treat the unit as enabled from the very first login, so a fresh
+#     appliance boots to a live gateway on :18789 without any manual step.
+#     The first-boot wizard (provision/steps/10-gateway.sh) still re-runs
+#     `openclaw gateway install`, which regenerates this file tuned to the
+#     machine (e.g. node heap from RAM) — idempotent, since ExecStart below
+#     mirrors what it writes for the baked /opt/openclaw install.
+#   * A system-level unit (airootfs/etc/systemd/system) would not work: the
+#     gateway must run in the desktop user's systemd session (its config,
+#     secrets store and SecretRefs live in the user's ~/.openclaw).
+#
+# The gateway runs from the baked /opt/openclaw build (customize_airootfs.sh)
+# on the image's nodejs (/usr/bin/node); no network is needed to start it.
+[Unit]
+Description=OpenClaw Gateway
+After=network-online.target
+Wants=network-online.target
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+# Entry mirrors `openclaw gateway install` output on the reference host
+# (node <install>/dist/index.js gateway --port 18789).
+ExecStart=/usr/bin/node /opt/openclaw/dist/index.js gateway --port 18789
+Restart=always
+RestartSec=5
+RestartPreventExitStatus=78
+TimeoutStopSec=330
+TimeoutStartSec=30
+SuccessExitStatus=0 143
+OOMPolicy=continue
+KillMode=control-group
+# The gateway spawns tools (git, ...) and OpenClaw's managed-service marker
+# env keeps `openclaw gateway status`/updates pointed at this unit.
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+Environment=OPENCLAW_GATEWAY_PORT=18789
+Environment=OPENCLAW_SYSTEMD_UNIT=openclaw-gateway.service
+Environment=OPENCLAW_SERVICE_MARKER=openclaw
+Environment=OPENCLAW_SERVICE_KIND=gateway
+
+[Install]
+WantedBy=default.target
