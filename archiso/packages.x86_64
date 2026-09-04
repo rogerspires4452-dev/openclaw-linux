@@ -31,6 +31,10 @@ chromium
 git
 nodejs
 pnpm
+# npm: build-time bootstrap for the workspace-pinned pnpm during the
+# customize_airootfs.sh bake (the openclaw repo pins pnpm@12.x; the distro
+# pnpm may be an older major that ignores pnpm-12 workspace settings).
+npm
 base-devel
 syslinux
 mkinitcpio-archiso
