@@ -15,7 +15,8 @@ here disagrees with it, AGENTS.md wins.
 - [README.md](README.md) — what this project is and where it is going.
 - [docs/](docs/) — runbooks (how to run and test things), specs, and
   verdicts (hard-won lessons; read the ones covering your change).
-- [provision/](provision/), [archiso/](archiso/), [scripts/](scripts/) —
+- [provision/](provision/), [archiso/](archiso/), [install/](install/),
+  [scripts/](scripts/) —
   the code.
 
 ## Claiming work
