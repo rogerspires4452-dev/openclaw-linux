@@ -45,3 +45,4 @@ dosfstools
 # installer
 archinstall
 arch-install-scripts
+corepack
