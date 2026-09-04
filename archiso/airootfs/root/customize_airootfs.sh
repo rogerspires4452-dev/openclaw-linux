@@ -140,4 +140,10 @@ fi
 # --- build-time hygiene --------------------------------------------------------
 rm -rf "$_check_home" /var/tmp/pnpm-store /tmp/node-compile-cache \
     /root/.npm /root/.cache/pnpm /root/.cache/node-gyp
+# Detach the chroot's /proc so mkarchiso's post-hook cleanup (a recursive
+# find -delete over the airootfs) does not walk the live host proc and abort
+# (observed 2026-09-04: "find: .../airootfs/proc/...: Invalid argument",
+# ISO_EXIT=1 at the cleanup phase on archiso 90). Lazy unmount from inside;
+# arch-chroot tolerates it already being gone on exit.
+umount -l /proc 2>/dev/null || true
 log "OpenClaw ${_expect} (${OPENCLAW_TAG}, ${_commit}) baked into ${OPENCLAW_DIR}; image build continues"
