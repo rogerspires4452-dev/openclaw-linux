@@ -41,4 +41,5 @@ file_permissions=(
   ["/root/provision/steps/30-telegram.sh"]="0:0:755"
   ["/root/provision/steps/40-dashboard.sh"]="0:0:755"
   ["/root/provision/steps/50-channel.sh"]="0:0:755"
+  ["/usr/local/bin/openclaw-dashboard-autostart"]="0:0:755"
 )

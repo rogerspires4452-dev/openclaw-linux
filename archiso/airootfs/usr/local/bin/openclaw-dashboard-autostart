@@ -1,0 +1,32 @@
+#!/bin/sh
+# OpenClaw dashboard autostart for the appliance desktop session.
+#
+# Waits (bounded) for the gateway health endpoint, then opens the Control UI
+# in Chromium app-mode — the only UI engine that works on the reference
+# hardware (WebKitGTK renders blank there:
+# docs/verdicts/webkitgtk-on-beelink.md). Command line mirrors
+# provision/install-dashboard-launcher.sh.
+#
+# Launched from the desktop user's Hyprland autostart (exec-once in
+# /etc/skel/.config/hypr/hyprland.conf) inside the uwsm graphical session.
+set -e
+
+DASH_URL="http://127.0.0.1:18789"
+HEALTH_URL="${DASH_URL}/healthz"
+TIMEOUT_SECS=60
+
+i=0
+while [ "$i" -lt "$TIMEOUT_SECS" ]; do
+    if curl -fsS --max-time 2 "${HEALTH_URL}" >/dev/null 2>&1; then
+        exec /usr/bin/chromium --app="${DASH_URL}" --class=openclaw-dash
+    fi
+    i=$((i + 1))
+    sleep 1
+done
+
+# Gateway did not come up in time (e.g. first-boot provisioning has not run
+# yet — the gateway user service is enabled by the wizard's step 1). Exit
+# quietly: the OpenClaw Dashboard app launcher (provision step 4) is the
+# manual fallback, and the next login retries.
+printf '%s\n' "openclaw-dashboard-autostart: ${HEALTH_URL} not reachable after ${TIMEOUT_SECS}s; giving up." >&2
+exit 0
