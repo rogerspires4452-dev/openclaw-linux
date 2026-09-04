@@ -89,7 +89,7 @@ _pinned_pnpm=$(grep -E '"packageManager": "pnpm@' "$OPENCLAW_DIR/package.json" \
     | sed 's/.*pnpm@\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/')
 [ -n "$_pinned_pnpm" ] || _pinned_pnpm='12.1.0'
 log "installing pinned pnpm@${_pinned_pnpm} via @pnpm/exe (prebuilt, no scripts)"
-npm install -g "@pnpm/exe@${_pinned_pnpm}" --ignore-scripts
+npm install -g "@pnpm/exe@${_pinned_pnpm}" --ignore-scripts --force
 pnpm --version
 
 # --- install deps + build -----------------------------------------------------
