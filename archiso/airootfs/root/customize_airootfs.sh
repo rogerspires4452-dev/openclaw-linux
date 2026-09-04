@@ -88,8 +88,12 @@ _pinned_pnpm=$(grep -E '"packageManager": "pnpm@' "$OPENCLAW_DIR/package.json" \
     | head -n 1 \
     | sed 's/.*pnpm@\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/')
 [ -n "$_pinned_pnpm" ] || _pinned_pnpm='12.1.0'
-log "installing pinned pnpm@${_pinned_pnpm} via @pnpm/exe (prebuilt, no scripts)"
-npm install -g "@pnpm/exe@${_pinned_pnpm}" --ignore-scripts --force
+log "installing pinned pnpm@${_pinned_pnpm} via @pnpm/exe (install.js fetches the native binary)"
+# npm >= 12 gates install scripts behind per-package approval; without it the
+# @pnpm/exe preinstall never runs and the shipped placeholder stays behind
+# (a broken text file masquerading as the pnpm bin). Approve, then install.
+npm install-scripts approve @pnpm/exe >/dev/null 2>&1 || true
+npm install -g "@pnpm/exe@${_pinned_pnpm}" --force
 pnpm --version
 
 # --- install deps + build -----------------------------------------------------
