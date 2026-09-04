@@ -52,9 +52,13 @@ Caveats, so nobody mistakes this for a headless provisioner:
   `sh /root/provision/firstboot.sh --dry-run` first for a no-change
   guidance pass.
 - The wizard requires the **openclaw CLI, installed and onboarded**
-  (`openclaw onboard --mode local`). Bundling the CLI into the image is a
-  tracked TODO in the repo's `archiso/README.md`; until then the wizard
-  runs on the installed box after the CLI install step.
+  (`openclaw onboard --mode local`). Since issue #21 the CLI ships **baked
+  into the image**: `customize_airootfs.sh` (the archiso build-time hook)
+  clones the pinned stable release to `/opt/openclaw`, builds it, and puts
+  `openclaw` on PATH, so the wizard runs fully offline for the software and
+  only needs network for the config steps (API key catalog, Telegram). The
+  gateway user unit is also pre-staged via `/etc/skel`; step 1's
+  `openclaw gateway install` regenerates it tuned to the machine.
 - The `openclaw-firstboot.service` unit exists as the archiso-standard hook
   point and self-disarming guard: enabled at install time it runs the
   wizard at first boot and, if the interactive prerequisites are not met,

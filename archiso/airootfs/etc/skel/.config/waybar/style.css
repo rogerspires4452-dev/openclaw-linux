@@ -1,0 +1,38 @@
+/* OpenClaw appliance stopgap bar — minimal Catppuccin-flavored styling. */
+
+* {
+    font-family: "Noto Sans";
+    font-size: 13px;
+    min-height: 0;
+}
+
+window#waybar {
+    background: rgba(30, 30, 46, 0.85);
+    color: #cdd6f4;
+}
+
+#workspaces button {
+    padding: 0 6px;
+    color: #cdd6f4;
+    border-radius: 4px;
+}
+
+#workspaces button.active {
+    background: #45475a;
+}
+
+#clock,
+#pulseaudio,
+#network,
+#battery,
+#tray {
+    padding: 0 8px;
+}
+
+#battery.critical {
+    color: #f38ba8;
+}
+
+#battery.charging {
+    color: #a6e3a1;
+}

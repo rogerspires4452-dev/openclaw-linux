@@ -8,6 +8,13 @@ sudo
 hyprland
 foot
 waybar
+# desktop session: SDDM (Wayland greeter) autologin -> uwsm -> Hyprland,
+# mirroring the reference Omarchy host (see docs/specs/desktop.md)
+sddm
+uwsm
+# app launcher (Omarchy ships one inside its Quickshell shell; on the
+# appliance waybar + fuzzel are the stopgap until the full omarchy layer)
+fuzzel
 xdg-desktop-portal-hyprland
 brightnessctl
 wl-clipboard
@@ -18,10 +25,16 @@ pipewire
 pipewire-pulse
 wireplumber
 noto-fonts
+# dashboard autostart wrapper + wizard health checks
+curl
 chromium
 git
 nodejs
 pnpm
+# npm: build-time bootstrap for the workspace-pinned pnpm during the
+# customize_airootfs.sh bake (the openclaw repo pins pnpm@12.x; the distro
+# pnpm may be an older major that ignores pnpm-12 workspace settings).
+npm
 base-devel
 syslinux
 mkinitcpio-archiso

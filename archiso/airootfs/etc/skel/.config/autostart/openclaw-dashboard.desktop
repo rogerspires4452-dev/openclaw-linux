@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+# OpenClaw Dashboard — Chromium app-mode autostart against the Control UI
+# (issue #21). Exec mirrors provision/install-dashboard-launcher.sh, which the
+# first-boot wizard uses to install the app-menu launcher; this copy lives in
+# /etc/skel/.config/autostart so XDG autostart (systemd's
+# xdg-autostart-generator in the graphical session) opens the dashboard on
+# every desktop-user login. WebKitGTK is banned on the reference hardware
+# (docs/verdicts/webkitgtk-on-beelink.md) — Chromium only.
+Name=OpenClaw Dashboard
+Comment=OpenClaw Control UI (Chromium app mode)
+Exec=/usr/bin/chromium --app=http://127.0.0.1:18789 --class=openclaw-dash
+Icon=chromium
+Terminal=false
+Categories=Network;
+StartupWMClass=openclaw-dash
+X-GNOME-Autostart-enabled=true
