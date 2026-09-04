@@ -78,16 +78,18 @@ log "checked out ${OPENCLAW_TAG} at ${_commit}"
 # The repo pins pnpm via the packageManager field (and uses pnpm-12-era
 # pnpm-workspace.yaml settings such as allowBuilds, which older pnpm
 # ignores — silently leaving dependency postinstalls unrun). Install the
-# pinned release globally via npm with --ignore-scripts: pnpm is pure JS and
-# needs no postinstall to function, and this avoids corepack's shims, which
-# produced a corrupted launcher inside the archiso chroot (observed 2026-09-04,
-# "syntax error near unexpected token ')'" on the prepared pnpm bin).
+# pinned release as @pnpm/exe (pnpm's official prebuilt static binary):
+# pnpm >= 10 builds its launcher in a postinstall, and both corepack and
+# npm's script blocking (npm >= 11 blocks pnpm's postinstall) leave a
+# corrupted shim behind in the archiso chroot (observed 2026-09-04 twice:
+# "/usr/bin/pnpm: line 4: syntax error" with the blocked-scripts message
+# text embedded in the bin). @pnpm/exe needs no postinstall.
 _pinned_pnpm=$(grep -E '"packageManager": "pnpm@' "$OPENCLAW_DIR/package.json" \
     | head -n 1 \
     | sed 's/.*pnpm@\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/')
 [ -n "$_pinned_pnpm" ] || _pinned_pnpm='12.1.0'
-log "installing pinned pnpm@${_pinned_pnpm} via npm (global, --ignore-scripts)"
-npm install -g "pnpm@${_pinned_pnpm}" --ignore-scripts
+log "installing pinned pnpm@${_pinned_pnpm} via @pnpm/exe (prebuilt, no scripts)"
+npm install -g "@pnpm/exe@${_pinned_pnpm}" --ignore-scripts
 pnpm --version
 
 # --- install deps + build -----------------------------------------------------
