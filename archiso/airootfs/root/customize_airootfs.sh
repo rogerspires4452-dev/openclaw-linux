@@ -85,9 +85,8 @@ _pinned_pnpm=$(grep -E '"packageManager": "pnpm@' "$OPENCLAW_DIR/package.json" \
     | head -n 1 \
     | sed 's/.*pnpm@\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/')
 [ -n "$_pinned_pnpm" ] || _pinned_pnpm='12.1.0'
-export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-log "activating pinned pnpm@${_pinned_pnpm} via corepack"
-corepack prepare "pnpm@${_pinned_pnpm}" --activate
+log "installing pinned pnpm@${_pinned_pnpm} via npm (--allow-scripts: npm>=11 blocks postinstall by default)"
+npm install --global --allow-scripts "pnpm@${_pinned_pnpm}"
 
 # --- install deps + build -----------------------------------------------------
 cd "$OPENCLAW_DIR"
