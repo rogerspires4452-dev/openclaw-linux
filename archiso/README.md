@@ -21,14 +21,19 @@ has been built from this profile yet — the maintainer builds and iterates
 archiso/
 ├── README.md                   ← this file
 ├── profiledef.sh               ← profile metadata mkarchiso sources (name, arch, bootmodes…)
-├── pacman.conf                 ← pacman config for the build chroot (multilib on; omarchy commented)
+├── pacman.conf                 ← pacman config for the build chroot (multilib + [omarchy] on)
 ├── packages.x86_64             ← package seed list, grouped by purpose (all verified)
 ├── airootfs/                   ← copied verbatim into the image root
 │   ├── etc/
 │   │   ├── mkinitcpio.conf.d/archiso.conf   ← archiso initramfs hooks (boot chain)
 │   │   ├── mkinitcpio.d/linux.preset        ← build only the archiso initramfs
+│   │   ├── sddm.conf.d/                     ← SDDM greeter + autologin (installed system)
+│   │   ├── skel/.config/{hypr,waybar}/      ← desktop-user session skeleton
 │   │   └── systemd/system/
 │   │       └── openclaw-firstboot.service   ← first-boot wizard hook (enabled at install time)
+│   ├── usr/
+│   │   ├── local/bin/openclaw-dashboard-autostart   ← dashboard app-mode wrapper
+│   │   └── share/sddm/hyprland.lua                  ← greeter compositor config
 │   └── root/provision/         ← staged copy of the repo's provision/ payload (+ README)
 ├── efiboot/loader/             ← systemd-boot config (UEFI bootmode)
 ├── grub/loopback.cfg           ← lets an existing GRUB boot the ISO directly
@@ -78,6 +83,39 @@ Notes:
 - No bootloader/installer flow exists yet (see TODOs): booting the media
   today gives a live appliance root with the staged payload at
   `/root/provision/`.
+
+## Desktop session wiring (installed system)
+
+The profile stages the Omarchy-style desktop chain
+(`docs/specs/desktop.md`), but it takes effect on the **installed** system,
+not the live root — the live media keeps the root TTY autologin (below) and
+does not enable a display manager:
+
+- `etc/sddm.conf.d/10-wayland.conf` — SDDM greeter on Hyprland (mirrors the
+  reference host; `start-hyprland` ships with the `hyprland` package).
+- `etc/sddm.conf.d/autologin.conf` — autologin `User=openclaw` into
+  `Session=hyprland-uwsm.desktop` (the uwsm-managed Hyprland entry shipped by
+  the `hyprland` package). **`openclaw` must be created at install time**
+  (the future installer does `useradd -m -G wheel openclaw`; update `User=`
+  here if a different name is chosen). No extra group is required for SDDM
+  autologin.
+- `usr/share/sddm/hyprland.lua` — minimal greeter compositor config.
+- `etc/skel/.config/hypr/hyprland.conf` — desktop-user Hyprland skeleton
+  (classic config): `SUPER+Return` foot, `SUPER+D` fuzzel, window binds, and
+  `exec-once` waybar + the dashboard wrapper. Seeded to new users via
+  `/etc/skel` at `useradd -m`.
+- `etc/skel/.config/waybar/{config.jsonc,style.css}` — stopgap top bar
+  (waybar ships no default config).
+- `usr/local/bin/openclaw-dashboard-autostart` — waits (bounded, 60s) for
+  `http://127.0.0.1:18789/healthz`, then opens the Control UI in Chromium
+  app-mode (WebKitGTK never:
+  `docs/verdicts/webkitgtk-on-beelink.md`).
+
+These are **templates the installer copies onto the target**: none collide
+with a package-owned path, so they survive the image build, and they only
+become live when an installed system overlays them and enables SDDM
+(`systemctl enable sddm`). Full steps in `docs/specs/desktop.md`,
+"Install-time provisioning".
 
 ## First-boot provisioning wiring
 
