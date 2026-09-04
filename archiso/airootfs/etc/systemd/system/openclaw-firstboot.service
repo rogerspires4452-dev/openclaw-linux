@@ -1,0 +1,37 @@
+[Unit]
+# OpenClaw appliance first-boot provisioning wizard (staged, archiso style).
+#
+# archiso practice for first-boot services: units shipped in the profile's
+# airootfs/etc/systemd/system/ land in the built image but are NOT enabled
+# there. Enablement happens at INSTALL time, inside the installed system's
+# chroot — the archiso profile cannot know the installed system's users or
+# disk layout. See /root/provision/README.md (installed image) and
+# archiso/README.md (repo) for the exact install-time commands.
+#
+# The wizard (firstboot.sh) is interactive by design: it uses masked secret
+# prompts and prints an ephemeral Telegram pairing code, and its steps talk
+# to the desktop user's systemd session (openclaw-gateway.service is a user
+# unit). Running it from this root-level oneshot therefore only works once
+# the appliance has a logged-in desktop user; until then the unit's run
+# fails fast with the wizard's own diagnostics, and the human runs the
+# wizard from their terminal (docs/specs/first-boot.md). This unit is the
+# documented hook point + self-disarming guard for the future scripted
+# installer, not a headless provisioning path.
+Description=OpenClaw appliance first-boot provisioning wizard
+Documentation=file:/root/provision/README.md
+# The pairing steps need a network path (DeepSeek catalog, Telegram bot).
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Runs the staged wizard. Success disarms the unit (ExecStartPost), so a
+# reboot can never re-run provisioning. Failure leaves it enabled so the
+# next boot retries; the wizard is idempotent and skips finished steps.
+ExecStart=/root/provision/firstboot.sh
+ExecStartPost=-/usr/bin/systemctl disable openclaw-firstboot.service
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
