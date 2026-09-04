@@ -1,0 +1,15 @@
+# mkinitcpio preset file for the 'linux' package on the OpenClaw Linux
+# install media.
+#
+# Replaces the stock preset during archiso builds: the airootfs overlay is
+# copied into the build chroot before packages are installed, so pacman's
+# mkinitcpio hook builds exactly this image — /boot/initramfs-linux.img with
+# the archiso hooks from /etc/mkinitcpio.conf.d/archiso.conf. Bootloader
+# configs in syslinux/, efiboot/ and grub/ all reference that filename.
+
+PRESETS=('archiso')
+
+ALL_kver='/boot/vmlinuz-linux'
+archiso_config='/etc/mkinitcpio.conf.d/archiso.conf'
+
+archiso_image="/boot/initramfs-linux.img"

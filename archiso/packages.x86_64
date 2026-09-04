@@ -3,50 +3,64 @@
 ## One package per line; blank lines and lines starting with "#" are ignored
 ## by mkarchiso. Comments are grouped by purpose.
 ##
-## This is a skeleton seed, not a tested package set: review every group
-## against current Arch repos before the first real ISO build (see README.md).
+## Every package name below was verified against the official Arch repos on
+## 2026-09-03 (archlinux.org/packages/search/json, core/extra/multilib):
+## re-verify before the first real ISO build (see README.md).
 ##
 ## UI note: WebKitGTK (webkit2gtk-4.1) is deliberately NOT listed — it renders
 ## blank on the reference hardware (docs/verdicts/webkitgtk-on-beelink.md).
 ## All UI is Chromium app-mode or native GTK/Qt clients.
+##
+## mkarchiso's own boot requirements are covered in group (5): `syslinux`
+## (BIOS bootloader binaries, validated by mkarchiso) and `mkinitcpio-archiso`
+## (the initramfs hooks that make the live media find and mount its root).
 
-# --- Base system ---
+# (1) Base system + kernel
 base
-base-devel          # build toolchain for AUR/from-source additions
 linux
 linux-firmware
-sudo
-networkmanager      # network control (nmcli/nmtui)
-openssh             # remote management of the appliance
+intel-ucode          # reference hardware is Alder Lake-N (Intel)
+networkmanager       # network control (nmcli/nmtui)
+openssh              # remote management of the appliance
+sudo                 # admin user for the appliance desktop session
 
-# --- Hyprland-family desktop (minimal bar + terminal; matches the beelink reference box) ---
+# (2) Hyprland-family desktop (minimal bar + terminal; matches the beelink reference box)
 hyprland
-waybar              # minimal status bar
-foot                # Wayland-native terminal
-xorg-xwayland       # X11 fallback for non-Wayland clients
+foot                 # Wayland-native terminal
+waybar               # minimal status bar
 xdg-desktop-portal-hyprland
-polkit              # privilege prompts for desktop apps
-wl-clipboard        # Wayland clipboard (needed by Chromium app-mode)
-xdg-utils           # xdg-open & friends
+brightnessctl        # backlight control (laptop/appliance displays)
+wl-clipboard         # Wayland clipboard (needed by Chromium app-mode)
+# X11 compatibility + desktop plumbing
+xorg-xwayland        # X11 fallback for non-Wayland clients
+polkit               # privilege prompts for desktop apps
+xdg-utils            # xdg-open & friends
+# Audio (PipeWire stack)
+pipewire
+pipewire-pulse
+wireplumber
+# Fonts
+noto-fonts
 
-# --- UI runtime: Chromium app-mode ---
+# (3) UI runtime: Chromium app-mode
 # The OpenClaw dashboard/pairing UI runs as `chromium --app=...` (see
 # provision/install-dashboard-launcher.sh). Do NOT add webkit2gtk-4.1 here.
 chromium
 
-# --- OpenClaw gateway runtime ---
+# (4) OpenClaw gateway runtime
 git
 nodejs
 pnpm
+base-devel           # build toolchain for AUR/from-source additions
 
-# --- Audio / fonts (sensible for a media-capable appliance) ---
-pipewire
-pipewire-pulse
-wireplumber
-noto-fonts
-
-# --- Boot/install plumbing for the installed target (EFI, Intel reference box) ---
+# (5) Boot/install plumbing
+# Live-media boot chain: syslinux (BIOS bootloader binaries mkarchiso copies
+# into the ISO) and mkinitcpio-archiso (archiso initramfs hooks, used when
+# mkinitcpio builds initramfs-linux.img inside the build chroot).
+syslinux
+mkinitcpio-archiso
+# Installed-target boot (EFI, Intel reference box): grub + efibootmgr for
+# the post-install bootloader setup; dosfstools for FAT/EFI work.
 grub
 efibootmgr
 dosfstools
-intel-ucode         # reference hardware is Alder Lake-N
