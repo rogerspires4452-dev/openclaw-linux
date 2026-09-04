@@ -78,21 +78,16 @@ log "checked out ${OPENCLAW_TAG} at ${_commit}"
 # The repo pins pnpm via the packageManager field (and uses pnpm-12-era
 # pnpm-workspace.yaml settings such as allowBuilds, which older pnpm
 # ignores — silently leaving dependency postinstalls unrun). Use the pinned
-# release; the image's distro pnpm may be an older major, so bootstrap the
-# pin with npm when needed (npm is in packages.x86_64 for exactly this).
+# release via corepack (bundled with nodejs): npm's global-install route is
+# avoided because npm >= 11 blocks pnpm's postinstall by default
+# (allowScripts), leaving a broken shim behind.
 _pinned_pnpm=$(grep -E '"packageManager": "pnpm@' "$OPENCLAW_DIR/package.json" \
     | head -n 1 \
     | sed 's/.*pnpm@\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/')
 [ -n "$_pinned_pnpm" ] || _pinned_pnpm='12.1.0'
-_pinned_major=${_pinned_pnpm%%.*}
-_installed_pnpm=$(pnpm --version 2>/dev/null || printf '')
-case "$_installed_pnpm" in
-    "$_pinned_major".*) : ;;
-    *)
-        log "system pnpm is '${_installed_pnpm:-missing}'; installing pinned pnpm@${_pinned_pnpm} via npm"
-        npm install --global "pnpm@${_pinned_pnpm}"
-        ;;
-esac
+export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+log "activating pinned pnpm@${_pinned_pnpm} via corepack"
+corepack prepare "pnpm@${_pinned_pnpm}" --activate
 
 # --- install deps + build -----------------------------------------------------
 cd "$OPENCLAW_DIR"
