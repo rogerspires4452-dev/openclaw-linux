@@ -26,20 +26,22 @@ maintainer's box.
 archiso/
 ├── README.md                   ← this file
 ├── profiledef.sh               ← profile metadata mkarchiso sources (name, arch, bootmodes…)
-├── pacman.conf                 ← pacman config for the build chroot (multilib on; omarchy commented)
+├── pacman.conf                 ← pacman config for the build chroot (multilib + [omarchy] on)
 ├── packages.x86_64             ← package seed list, grouped by purpose (all verified)
 ├── airootfs/                   ← copied verbatim into the image root
 │   ├── etc/
 │   │   ├── mkinitcpio.conf.d/archiso.conf   ← archiso initramfs hooks (boot chain)
 │   │   ├── mkinitcpio.d/linux.preset        ← build only the archiso initramfs
-│   │   ├── skel/                             ← desktop-user skeleton (copied to every new home)
-│   │   │   └── .config/
-│   │   │       ├── autostart/openclaw-dashboard.desktop  ← dashboard on login (Chromium app-mode)
-│   │   │       └── systemd/user/
-│   │   │           ├── openclaw-gateway.service          ← gateway user unit
-│   │   │           └── default.target.wants/             ← pre-enables the unit (symlink)
+│   │   ├── sddm.conf.d/                     ← SDDM greeter + autologin (installed system)
+│   │   ├── skel/.config/                    ← desktop-user skeleton (copied to new homes)
+│   │   │   ├── hypr/, waybar/               ← session + bar config (issue #20)
+│   │   │   ├── autostart/openclaw-dashboard.desktop  ← dashboard on login (Chromium app-mode)
+│   │   │   └── systemd/user/openclaw-gateway.service ← gateway user unit (pre-enabled)
 │   │   └── systemd/system/
 │   │       └── openclaw-firstboot.service   ← first-boot wizard hook (enabled at install time)
+│   ├── usr/
+│   │   ├── local/bin/openclaw-dashboard-autostart   ← dashboard app-mode wrapper
+│   │   └── share/sddm/hyprland.lua                  ← greeter compositor config
 │   ├── root/
 │   │   ├── customize_airootfs.sh            ← BUILD-TIME bake hook (issue #21; see below)
 │   │   └── provision/         ← staged copy of the repo's provision/ payload (+ README)
@@ -129,6 +131,39 @@ Notes:
   **boot → gateway on <http://127.0.0.1:18789> → dashboard** story, fully
   offline (see "Build-time bake" below). Config (API key, Telegram pairing)
   is still a first-boot wizard pass — that part needs network.
+
+## Desktop session wiring (installed system)
+
+The profile stages the Omarchy-style desktop chain
+(`docs/specs/desktop.md`), but it takes effect on the **installed** system,
+not the live root — the live media keeps the root TTY autologin (below) and
+does not enable a display manager:
+
+- `etc/sddm.conf.d/10-wayland.conf` — SDDM greeter on Hyprland (mirrors the
+  reference host; `start-hyprland` ships with the `hyprland` package).
+- `etc/sddm.conf.d/autologin.conf` — autologin `User=openclaw` into
+  `Session=hyprland-uwsm.desktop` (the uwsm-managed Hyprland entry shipped by
+  the `hyprland` package). **`openclaw` must be created at install time**
+  (the future installer does `useradd -m -G wheel openclaw`; update `User=`
+  here if a different name is chosen). No extra group is required for SDDM
+  autologin.
+- `usr/share/sddm/hyprland.lua` — minimal greeter compositor config.
+- `etc/skel/.config/hypr/hyprland.conf` — desktop-user Hyprland skeleton
+  (classic config): `SUPER+Return` foot, `SUPER+D` fuzzel, window binds, and
+  `exec-once` waybar + the dashboard wrapper. Seeded to new users via
+  `/etc/skel` at `useradd -m`.
+- `etc/skel/.config/waybar/{config.jsonc,style.css}` — stopgap top bar
+  (waybar ships no default config).
+- `usr/local/bin/openclaw-dashboard-autostart` — waits (bounded, 60s) for
+  `http://127.0.0.1:18789/healthz`, then opens the Control UI in Chromium
+  app-mode (WebKitGTK never:
+  `docs/verdicts/webkitgtk-on-beelink.md`).
+
+These are **templates the installer copies onto the target**: none collide
+with a package-owned path, so they survive the image build, and they only
+become live when an installed system overlays them and enables SDDM
+(`systemctl enable sddm`). Full steps in `docs/specs/desktop.md`,
+"Install-time provisioning".
 
 ## Build-time bake (issue #21): the gateway ships in the image
 
