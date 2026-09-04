@@ -8,12 +8,17 @@ Omarchy/beelink box (Alder Lake-N, Intel), and the profile targets the same
 software stack — minus anything that depends on WebKitGTK, which renders
 blank there ([`docs/verdicts/webkitgtk-on-beelink.md`](../docs/verdicts/webkitgtk-on-beelink.md)).
 
-**Status: buildable skeleton.** Every file is syntactically validated and
-every package name is verified against the official Arch repos, but no ISO
-has been built from this profile yet — the maintainer builds and iterates
-(`mkarchiso` needs root and a long runtime). The profile mirrors the
-`releng` layout shipped with archiso 90 (bootmode names `bios.syslinux` /
-`uefi.systemd-boot`, plain `initramfs-linux.img` with the archiso hooks).
+**Status: buildable skeleton with a complete install flow.** Every file is
+syntactically validated and every package name is verified against the
+official Arch repos, but no ISO has been built from this profile yet — the
+maintainer builds and iterates (`mkarchiso` needs root and a long runtime).
+The profile mirrors the `releng` layout shipped with archiso 90 (bootmode
+names `bios.syslinux` / `uefi.systemd-boot`, plain `initramfs-linux.img`
+with the archiso hooks). Since 2026-09-04 the media also ships a guided
+installer at `/root/install-openclaw.sh` (issue #22) — boot the stick and
+run it to install OpenClaw Linux onto a PC; see
+[`install/`](../install/README.md) for the design and the archinstall
+version pinning.
 
 ## Layout
 
@@ -25,11 +30,14 @@ archiso/
 ├── packages.x86_64             ← package seed list, grouped by purpose (all verified)
 ├── airootfs/                   ← copied verbatim into the image root
 │   ├── etc/
+│   │   ├── issue               ← live-console banner: how to run the guided installer
 │   │   ├── mkinitcpio.conf.d/archiso.conf   ← archiso initramfs hooks (boot chain)
 │   │   ├── mkinitcpio.d/linux.preset        ← build only the archiso initramfs
 │   │   └── systemd/system/
 │   │       └── openclaw-firstboot.service   ← first-boot wizard hook (enabled at install time)
-│   └── root/provision/         ← staged copy of the repo's provision/ payload (+ README)
+│   └── root/
+│       ├── install-openclaw.sh ← guided installer (staged copy of install/)
+│       └── provision/          ← staged copy of the repo's provision/ payload (+ README)
 ├── efiboot/loader/             ← systemd-boot config (UEFI bootmode)
 ├── grub/loopback.cfg           ← lets an existing GRUB boot the ISO directly
 └── syslinux/                   ← syslinux config (BIOS bootmode)
@@ -75,9 +83,31 @@ Notes:
   archisosearchuuid=<uuid>`) makes the hooks find and mount
   `/<install_dir>/x86_64/airootfs.sfs` (squashfs), then switch into the live
   root.
-- No bootloader/installer flow exists yet (see TODOs): booting the media
-  today gives a live appliance root with the staged payload at
-  `/root/provision/`.
+- Booting the media lands on a root console (autologin on tty1). The console
+  banner (`airootfs/etc/issue`) points at the guided installer:
+  `sh /root/install-openclaw.sh` (`--check` runs a read-only probe of the
+  machine first).
+
+## Guided install-to-disk (issue #22)
+
+`install/install-openclaw.sh` (repo) is staged as
+`archiso/airootfs/root/install-openclaw.sh`, so a built ISO carries it at
+`/root/install-openclaw.sh` (mode 755 via `profiledef.sh`
+`file_permissions`). It prompts for the target disk (with existing-OS
+detection + erase confirmation), hostname/user/passwords, then drives
+archinstall in scripted mode for a full-disk UEFI install (ESP + btrfs
+`@` layout, grub, NetworkManager, zram) and stages/enables the first-boot
+payload in the installed system. Read
+[`install/README.md`](../install/README.md) first — it documents the
+archinstall path choice, the schema pinning, and what still needs a live
+hardware test.
+
+Sync rule: the staged copy must stay **byte-identical** to
+`install/install-openclaw.sh` (same convention as `provision/`):
+
+```sh
+cp install/install-openclaw.sh archiso/airootfs/root/install-openclaw.sh
+```
 
 ## First-boot provisioning wiring
 
@@ -100,8 +130,10 @@ The profile stages them:
   systemctl enable openclaw-firstboot.service   # in the installed chroot
   ```
 
-  The scripted installer (TODO below) performs that step; manual installs
-  can run it after `arch-chroot`.
+  The guided installer ([`install/install-openclaw.sh`](../install/install-openclaw.sh))
+  performs that step automatically at the end of a scripted install: it
+  copies the staged wizard payload into the target and enables the unit
+  (manual installs can still run the command above after `arch-chroot`).
 
 - The wizard is interactive (masked secret prompts, ephemeral pairing
   code) and drives the desktop user's systemd session, so the first-boot UX
@@ -126,13 +158,18 @@ plumbing. Every name was verified against the official Arch repos on
 `syslinux` and `mkinitcpio-archiso` are required by mkarchiso's bootmode
 validation/boot chain. `webkit2gtk-4.1` is deliberately absent.
 
+`install/install-openclaw.sh` embeds its own **target** package list for
+installed systems: the same seed minus the live-media-only entries
+(syslinux, mkinitcpio-archiso, dosfstools, archinstall,
+arch-install-scripts); CPU microcode is added by archinstall at install
+time. Keep the two lists in sync when the seed changes.
+
 ## TODOs
 
-- Scripted install-to-disk flow (archinstall/calamares/scripted) that, at
-  install time, copies the airootfs overlay to the target and enables
-  `openclaw-firstboot.service`.
 - Bundle the openclaw CLI/gateway into the image (clone or AUR-style) so a
   fresh install only runs the wizard — needs the repo's blessed install
-  path; tracked against the first-boot spec.
+  path; tracked against the first-boot spec (issue #21).
 - First real `mkarchiso` build, then a qemu smoke test (above), then
   re-verify the package seed against current repos at build time.
+- One full install-to-disk run from a built ISO on spare hardware (see
+  `install/README.md`, "Needs a live hardware test").

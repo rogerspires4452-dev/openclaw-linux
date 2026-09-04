@@ -1,0 +1,13 @@
+\r (\l)
+
+OpenClaw Linux — live / install media
+
+  To install OpenClaw Linux onto this PC's disk (erases the chosen disk;
+  detects and refuses to wipe existing systems unless you insist):
+
+      sh /root/install-openclaw.sh
+
+  Read-only system check (shows disks and what this media detects on them):
+
+      sh /root/install-openclaw.sh --check
+

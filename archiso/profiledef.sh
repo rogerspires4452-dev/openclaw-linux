@@ -31,6 +31,7 @@ airootfs_image_tool_options=('-comp' 'zstd' '-Xcompression-level' '15')
 # only thing that keeps executables executable inside the image.
 file_permissions=(
   ["/root"]="0:0:750"
+  ["/root/install-openclaw.sh"]="0:0:755"
   ["/root/provision"]="0:0:750"
   ["/root/provision/backup.sh"]="0:0:755"
   ["/root/provision/firstboot.sh"]="0:0:755"
