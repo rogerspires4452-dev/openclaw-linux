@@ -28,3 +28,7 @@ mkinitcpio-archiso
 grub
 efibootmgr
 dosfstools
+
+# installer
+archinstall
+arch-install-scripts
